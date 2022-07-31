@@ -2,6 +2,7 @@ import tqdm
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from torchmetrics import Accuracy
@@ -10,12 +11,13 @@ from dlwpt.utils import set_device, get_mnist_datasets
 
 
 class CNN(nn.Module):
-    def __init__(self, lr=0.01, n_classes=10, n_filters=16, kernel_size=3, optim=None):
+    def __init__(self, lr=0.01, n_classes=10, n_filters=16, kernel_size=3, pool_size=2, optim=None):
         super().__init__()
         self.lr = lr
         self.n_classes = n_classes
         self.n_filters = n_filters
         self.kernel_size = kernel_size
+        self.pool_size = pool_size
         self.loss_func = nn.CrossEntropyLoss()
 
         self.c = 1
@@ -25,20 +27,26 @@ class CNN(nn.Module):
         self.layers = nn.Sequential(
             nn.Conv2d(self.c, self.n_filters, self.kernel_size, padding=self.kernel_size // 2),
             nn.ReLU(),
+            nn.Conv2d(self.n_filters, self.n_filters, self.kernel_size, padding=self.kernel_size // 2),
+            nn.ReLU(),
+            nn.Conv2d(self.n_filters, self.n_filters, self.kernel_size, padding=self.kernel_size // 2),
+            nn.ReLU(),
+            nn.MaxPool2d(self.pool_size),
+            nn.Conv2d(self.n_filters, self.n_filters*self.pool_size, self.kernel_size, padding=self.kernel_size // 2),
+            nn.ReLU(),
+            nn.Conv2d(self.n_filters*self.pool_size, self.n_filters*self.pool_size, self.kernel_size, padding=self.kernel_size // 2),
+            nn.ReLU(),
+            nn.Conv2d(self.n_filters*self.pool_size, self.n_filters*self.pool_size, self.kernel_size, padding=self.kernel_size // 2),
+            nn.ReLU(),
+            nn.MaxPool2d(self.pool_size),
             nn.Flatten(),
-            nn.Linear(self.n_filters * self.h * self.w, self.n_classes)
+            nn.Linear((self.n_filters * self.h * self.w) // ((self.pool_size*self.pool_size)*2), self.n_classes)
         )
 
         self.optim = optim if optim else torch.optim.Adam(self.layers.parameters(), lr=self.lr)
 
     def forward(self, x):
         return self.layers(x)
-
-    def train_step(self, batch, idx):
-        x, y = batch
-        pred = self.forward(x)
-        loss = self.loss_func(pred, y)
-        return loss
 
 
 class Trainer:
@@ -60,14 +68,14 @@ class Trainer:
                 labels = labels.to(self.device)
                 self.model.optim.zero_grad()
 
-                pred = self.model(inputs)
-                loss = self.model.loss_func(pred, labels)
+                logits = self.model(inputs)
+                loss = self.model.loss_func(logits, labels)
                 loss.backward()
-
-                self.metric(pred.cpu(), labels.cpu())
                 total_loss += loss.item()
-
                 self.model.optim.step()
+
+                preds = F.softmax(logits.cpu(), dim=1).argmax(1)
+                self.metric(preds, labels.cpu())
 
             train_acc = self.metric.compute()
             self.metric.reset()
@@ -82,10 +90,12 @@ class Trainer:
                     for inputs, labels in tqdm.tqdm(train_dl, desc='Batch', leave=False):
                         inputs = inputs.to(self.device)
                         labels = labels.to(self.device)
-                        pred = self.model(inputs)
-                        loss = self.model.loss_func(pred, labels)
-                        self.metric(pred.cpu(), labels.cpu())
+                        logits = self.model(inputs)
+                        loss = self.model.loss_func(logits, labels)
                         total_loss += loss.item()
+
+                        preds = F.softmax(logits.cpu(), dim=1).argmax(1)
+                        self.metric(preds, labels.cpu())
 
                     valid_acc = self.metric.compute()
                     self.metric.reset()
