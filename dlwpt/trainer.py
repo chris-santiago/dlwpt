@@ -17,7 +17,7 @@ class Trainer:
         self.writer = SummaryWriter(log_dir=log_dir)
 
     def fit(self, train_dl, test_dl=None):
-        for epoch in tqdm.tqdm(range(self.epochs), desc='Epoch'):
+        for epoch in tqdm.tqdm(range(self.epochs), desc='Epoch', leave=True):
             self.model.train()
             total_loss = 0
 
@@ -32,8 +32,8 @@ class Trainer:
                 total_loss += loss.item()
                 self.model.optim.step()
 
-                preds = F.softmax(logits.cpu(), dim=1).argmax(1)
-                self.metric(preds, labels.cpu())
+                preds = self.model.predict(inputs)
+                self.metric(preds.cpu(), labels.cpu())
 
             train_acc = self.metric.compute()
             self.metric.reset()
@@ -52,8 +52,8 @@ class Trainer:
                         loss = self.model.loss_func(logits, labels)
                         total_loss += loss.item()
 
-                        preds = F.softmax(logits.cpu(), dim=1).argmax(1)
-                        self.metric(preds, labels.cpu())
+                        preds = self.model.predict(inputs)
+                        self.metric(preds.cpu(), labels.cpu())
 
                     valid_acc = self.metric.compute()
                     self.metric.reset()

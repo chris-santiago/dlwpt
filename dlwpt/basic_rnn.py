@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 
 from dlwpt.trainer import Trainer
@@ -51,7 +52,7 @@ class LastTimeStep(nn.Module):
 
 
 class RnnModel(nn.Module):
-    def __init__(self, vocab_size, n_classes, lr=0.01, embed_dims=64, hidden_size=256, optim=None):
+    def __init__(self, vocab_size, n_classes, lr=0.001, embed_dims=64, hidden_size=256, optim=None):
         super().__init__()
         self.vocab_size = vocab_size
         self.n_classes = n_classes
@@ -71,6 +72,10 @@ class RnnModel(nn.Module):
 
     def forward(self, x):
         return self.model(x)
+
+    def predict(self, x):
+        logits = self(x)
+        return F.softmax(logits, dim=-1)
 
 
 if __name__ == '__main__':

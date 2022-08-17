@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
 from dlwpt.trainer import Trainer
@@ -7,7 +8,7 @@ from dlwpt.utils import set_device, get_mnist_datasets
 
 
 class CNN(nn.Module):
-    def __init__(self, lr=0.01, n_classes=10, n_filters=16, kernel_size=3, pool_size=2, optim=None):
+    def __init__(self, lr=0.001, n_classes=10, n_filters=16, kernel_size=3, pool_size=2, optim=None):
         super().__init__()
         self.lr = lr
         self.n_classes = n_classes
@@ -44,6 +45,10 @@ class CNN(nn.Module):
     def forward(self, x):
         return self.layers(x)
 
+    def predict(self, x):
+        logits = self(x)
+        return F.softmax(logits, dim=1)
+
 
 if __name__ == "__main__":
     from dlwpt import ROOT
@@ -59,7 +64,7 @@ if __name__ == "__main__":
     device = set_device()
 
     mod = CNN()
-    trainer = Trainer(mod, epochs=5, device=device, log_dir=LOG_DIR)
+    trainer = Trainer(mod, epochs=10, device=device, log_dir=LOG_DIR)
     trainer.fit(train_loader, test_loader)
 
 
