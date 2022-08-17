@@ -45,7 +45,7 @@ class Trainer:
                 with torch.no_grad():
                     total_loss = 0
 
-                    for inputs, labels in tqdm.tqdm(train_dl, desc='Batch', leave=False):
+                    for inputs, labels in tqdm.tqdm(test_dl, desc='Batch', leave=False):
                         inputs = inputs.to(self.device)
                         labels = labels.to(self.device)
                         logits = self.model(inputs)

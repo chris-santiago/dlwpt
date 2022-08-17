@@ -2,7 +2,8 @@ import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 
-from dlwpt.utils import get_language_data, get_alphabet
+from dlwpt.trainer import Trainer
+from dlwpt.utils import get_language_data, get_alphabet, set_device
 
 
 class LanguageNameDataset(Dataset):
@@ -50,10 +51,11 @@ class LastTimeStep(nn.Module):
 
 
 class RnnModel(nn.Module):
-    def __init__(self, vocab_size, n_classes, embed_dims=64, hidden_size=256):
+    def __init__(self, vocab_size, n_classes, lr=0.01, embed_dims=64, hidden_size=256, optim=None):
         super().__init__()
         self.vocab_size = vocab_size
         self.n_classes = n_classes
+        self.lr = lr
         self.embed_dims = embed_dims
         self.hidden_size = hidden_size
         self.loss_func = nn.CrossEntropyLoss()
@@ -65,11 +67,19 @@ class RnnModel(nn.Module):
             nn.Linear(self.hidden_size, self.n_classes)
         )
 
+        self.optim = optim if optim else torch.optim.Adam(self.model.parameters(), lr=self.lr)
+
     def forward(self, x):
         return self.model(x)
 
 
 if __name__ == '__main__':
+    from dlwpt import ROOT
+    from datetime import datetime
+
+    NOW = datetime.now().strftime('%Y%m%d-%H%M')
+    LOG_DIR = ROOT.joinpath('runs', NOW)
+
     data = get_language_data(verbose=True)
     letters, alphabet = get_alphabet()
     dataset = LanguageNameDataset(data, alphabet)
@@ -79,4 +89,7 @@ if __name__ == '__main__':
     train_ldr = DataLoader(train, batch_size=1, shuffle=True)
     test_ldr = DataLoader(test, batch_size=1, shuffle=False)
 
-
+    device = set_device()
+    mod = RnnModel(vocab_size=len(letters), n_classes=len(dataset.label_names))
+    trainer = Trainer(mod, epochs=5, device=device, log_dir=LOG_DIR)
+    trainer.fit(train_ldr, test_ldr)
