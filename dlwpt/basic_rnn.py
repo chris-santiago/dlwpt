@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 
 from dlwpt.utils import get_language_data, get_alphabet
@@ -29,6 +30,23 @@ class LanguageNameDataset(Dataset):
         name = self.data[idx]
         label = self.labels[idx]
         return self.str_to_input(name), label
+
+
+class LastTimeStep(nn.Module):
+    def __init__(self, layers=1, bidirectional=False):
+        super().__init__()
+        self.layers = layers
+        self.num_directions = 2 if bidirectional else 1
+
+    def forward(self, input):
+        output, last_step = input[0], input[1]
+        if isinstance(last_step, tuple):
+            last_step = last_step[0]
+        batch_size = last_step.shape[1]
+        last_step = last_step.view(self.layers, self.num_directions, batch_size, -1)
+        last_step = last_step[self.layers-1]
+        last_step = last_step.permute(1, 0, 2)  # batch in first dim
+        return last_step.reshape(batch_size, -1)
 
 
 if __name__ == '__main__':
