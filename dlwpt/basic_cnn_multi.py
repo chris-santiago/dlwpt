@@ -1,7 +1,8 @@
 import torch
 import torch.nn as nn
 
-from dlwpt.basic_cnn import CNN, Trainer
+from dlwpt.basic_cnn import CNN
+from dlwpt.trainer import Trainer
 
 model = nn.parallel.DistributedDataParallel()
 

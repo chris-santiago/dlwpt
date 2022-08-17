@@ -1,12 +1,8 @@
-import tqdm
-
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch.utils.data import DataLoader
-from torch.utils.tensorboard import SummaryWriter
-from torchmetrics import Accuracy
 
+from dlwpt.trainer import Trainer
 from dlwpt.utils import set_device, get_mnist_datasets
 
 
@@ -47,63 +43,6 @@ class CNN(nn.Module):
 
     def forward(self, x):
         return self.layers(x)
-
-
-class Trainer:
-    def __init__(self, model, epochs=20, device=None, log_dir=None):
-        self.model = model
-        self.epochs = epochs
-        self.device = device if device else set_device()
-        self.model.to(self.device)
-        self.metric = Accuracy()
-        self.writer = SummaryWriter(log_dir=log_dir)
-
-    def fit(self, train_dl, test_dl=None):
-        for epoch in tqdm.tqdm(range(self.epochs), desc='Epoch'):
-            self.model.train()
-            total_loss = 0
-
-            for inputs, labels in tqdm.tqdm(train_dl, desc='Batch', leave=False):
-                inputs = inputs.to(self.device)
-                labels = labels.to(self.device)
-                self.model.optim.zero_grad()
-
-                logits = self.model(inputs)
-                loss = self.model.loss_func(logits, labels)
-                loss.backward()
-                total_loss += loss.item()
-                self.model.optim.step()
-
-                preds = F.softmax(logits.cpu(), dim=1).argmax(1)
-                self.metric(preds, labels.cpu())
-
-            train_acc = self.metric.compute()
-            self.metric.reset()
-            self.writer.add_scalar('TrainLoss', total_loss, epoch)
-            self.writer.add_scalar('TrainAccuracy', train_acc, epoch)
-
-            if test_dl:
-                self.model.eval()
-                with torch.no_grad():
-                    total_loss = 0
-
-                    for inputs, labels in tqdm.tqdm(train_dl, desc='Batch', leave=False):
-                        inputs = inputs.to(self.device)
-                        labels = labels.to(self.device)
-                        logits = self.model(inputs)
-                        loss = self.model.loss_func(logits, labels)
-                        total_loss += loss.item()
-
-                        preds = F.softmax(logits.cpu(), dim=1).argmax(1)
-                        self.metric(preds, labels.cpu())
-
-                    valid_acc = self.metric.compute()
-                    self.metric.reset()
-                    self.writer.add_scalar('ValidLoss', total_loss, epoch)
-                    self.writer.add_scalar('ValidAccuracy', valid_acc, epoch)
-
-        self.writer.flush()
-        self.writer.close()
 
 
 if __name__ == "__main__":

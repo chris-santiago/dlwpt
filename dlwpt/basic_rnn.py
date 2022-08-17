@@ -49,12 +49,34 @@ class LastTimeStep(nn.Module):
         return last_step.reshape(batch_size, -1)
 
 
+class RnnModel(nn.Module):
+    def __init__(self, vocab_size, n_classes, embed_dims=64, hidden_size=256):
+        super().__init__()
+        self.vocab_size = vocab_size
+        self.n_classes = n_classes
+        self.embed_dims = embed_dims
+        self.hidden_size = hidden_size
+        self.loss_func = nn.CrossEntropyLoss()
+
+        self.model = nn.Sequential(
+            nn.Embedding(self.vocab_size, self.embed_dims),
+            nn.RNN(self.embed_dims, self.hidden_size, batch_first=True),
+            LastTimeStep(),
+            nn.Linear(self.hidden_size, self.n_classes)
+        )
+
+    def forward(self, x):
+        return self.model(x)
+
+
 if __name__ == '__main__':
     data = get_language_data(verbose=True)
-    _, alphabet = get_alphabet()
+    letters, alphabet = get_alphabet()
     dataset = LanguageNameDataset(data, alphabet)
 
     test_size = 300
     train, test = torch.utils.data.random_split(dataset, (len(dataset)-test_size, test_size))
     train_ldr = DataLoader(train, batch_size=1, shuffle=True)
     test_ldr = DataLoader(test, batch_size=1, shuffle=False)
+
+
