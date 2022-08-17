@@ -27,8 +27,17 @@ def get_mnist_datasets():
 
 def get_alphabet():
     letters = string.ascii_letters + ".,;'"
-    alphabet = dict(enumerate(letters))
+    alphabet = {v: k for k, v in dict(enumerate(letters)).items()}
     return letters, alphabet
+
+
+def to_ascii(s):
+    letters, _ = get_alphabet()
+    return ''.join(
+        c for c in unicodedata.normalize('NFD', s)
+        if unicodedata.category(c) != 'Mn'
+        and c in letters
+    )
 
 
 def get_language_data(verbose=False):
@@ -38,15 +47,6 @@ def get_language_data(verbose=False):
     contents.extractall()
 
     data = {}
-    letters = string.ascii_letters + ".,;'"
-    alphabet = dict(enumerate(letters))
-
-    def to_ascii(s):
-        return ''.join(
-            c for c in unicodedata.normalize('NFD', s)
-            if unicodedata.category(c) != 'Mn'
-            and c in letters
-        )
 
     for fp in contents.namelist():
         if 'data/names/' in fp and fp.endswith('.txt'):

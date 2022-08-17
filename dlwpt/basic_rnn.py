@@ -1,7 +1,7 @@
 import torch
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
 
-from dlwpt.utils import get_language_data
+from dlwpt.utils import get_language_data, get_alphabet
 
 
 class LanguageNameDataset(Dataset):
@@ -22,10 +22,21 @@ class LanguageNameDataset(Dataset):
     def str_to_input(self, input_string):
         names = torch.zeros(len(input_string), dtype=torch.long)
         for pos, char in enumerate(input_string):
-            names[pos] = self.vocab(char)
+            names[pos] = self.vocab[char]
         return names
     
     def __getitem__(self, idx):
         name = self.data[idx]
         label = self.labels[idx]
-        return self.string_to_input(name), label
+        return self.str_to_input(name), label
+
+
+if __name__ == '__main__':
+    data = get_language_data(verbose=True)
+    _, alphabet = get_alphabet()
+    dataset = LanguageNameDataset(data, alphabet)
+
+    test_size = 300
+    train, test = torch.utils.data.random_split(dataset, (len(dataset)-test_size, test_size))
+    train_ldr = DataLoader(train, batch_size=1, shuffle=True)
+    test_ldr = DataLoader(test, batch_size=1, shuffle=False)
