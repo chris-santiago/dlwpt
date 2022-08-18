@@ -80,7 +80,7 @@ class RnnModel(nn.Module):
 
         self.model = nn.Sequential(
             EmbeddingPackable(nn.Embedding(self.vocab_size, self.embed_dims)),
-            nn.GRU(self.embed_dims, self.hidden_size, batch_first=True, bidirectional=True),
+            nn.RNN(self.embed_dims, self.hidden_size, batch_first=True, bidirectional=True),
             LastTimeStep(),
             nn.Linear(self.hidden_size*2, self.n_classes)
         )
@@ -107,7 +107,7 @@ if __name__ == '__main__':
     dataset = LanguageNameDataset(data, alphabet)
 
     test_size = 300
-    bs = 32
+    bs = 16
     train, test = torch.utils.data.random_split(dataset, (len(dataset)-test_size, test_size))
     train_ldr = DataLoader(train, batch_size=bs, shuffle=True, collate_fn=pad_and_pack)
     test_ldr = DataLoader(test, batch_size=bs, shuffle=False, collate_fn=pad_and_pack)

@@ -57,7 +57,7 @@ if __name__ == "__main__":
     NOW = datetime.now().strftime('%Y%m%d-%H%M')
     LOG_DIR = ROOT.joinpath('runs', NOW)
     BATCH = 128
-    train, test = get_mnist_datasets(do_augment=True)
+    train, test = get_mnist_datasets(do_augment=False)
 
     train_loader = DataLoader(train, batch_size=BATCH, shuffle=True)
     test_loader = DataLoader(test, batch_size=BATCH)

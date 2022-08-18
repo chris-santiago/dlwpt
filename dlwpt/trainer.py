@@ -10,15 +10,32 @@ from dlwpt.utils import set_device
 
 
 class Trainer:
-    def __init__(self, model, epochs=20, device=None, log_dir=None, checkpoint_file=None):
+    def __init__(
+            self, model, epochs=20, score_funcs=None, device=None, log_dir=None,
+            checkpoint_file=None
+    ):
         self.model = model
         self.epochs = epochs
+        self.score_funcs = score_funcs if score_funcs else {'accuracy': Accuracy()}
         self.device = device if device else set_device()
         self.model.to(self.device)
-        self.metric = Accuracy()
         self.writer = SummaryWriter(log_dir=log_dir)
         self.checkpoint_file = checkpoint_file
         self.results = defaultdict(list)
+
+    def score_batch(self, inputs, labels):
+        preds = self.model.predict(inputs)
+        for metric in self.score_funcs:
+            self.score_funcs[metric](preds.cpu(), labels.cpu())
+
+    def score_epoch(self, total_loss, epoch, mode):
+        self.results[f'{mode}_loss'].append(total_loss)
+        self.writer.add_scalar(f'{mode}_loss', total_loss, epoch)
+        for metric in self.score_funcs:
+            score = self.score_funcs[metric].compute().item()
+            self.results[f'{mode}_{metric}'].append(score)
+            self.writer.add_scalar(f'{mode}_{metric}', score, epoch)
+            self.score_funcs[metric].reset()
 
     def fit(self, train_dl, test_dl=None):
         for epoch in tqdm.tqdm(range(self.epochs), desc='Epoch', leave=True):
@@ -36,38 +53,23 @@ class Trainer:
                 loss.backward()
                 total_loss += loss.item()
                 self.model.optim.step()
+                self.score_batch(inputs, labels)
 
-                preds = self.model.predict(inputs)
-                self.metric(preds.cpu(), labels.cpu())
-
-            train_acc = self.metric.compute().item()
-            self.metric.reset()
-            self.results['train_loss'].append(total_loss)
-            self.results['train_accuracy'].append(train_acc)
-            self.writer.add_scalar('TrainLoss', total_loss, epoch)
-            self.writer.add_scalar('TrainAccuracy', train_acc, epoch)
+            self.score_epoch(total_loss, epoch, 'train')
 
             if test_dl:
                 self.model.eval()
                 with torch.no_grad():
                     total_loss = 0
-
                     for inputs, labels in tqdm.tqdm(test_dl, desc='Batch', leave=False):
                         inputs = inputs.to(self.device)
                         labels = labels.to(self.device)
                         logits = self.model(inputs)
                         loss = self.model.loss_func(logits, labels)
                         total_loss += loss.item()
+                        self.score_batch(inputs, labels)
 
-                        preds = self.model.predict(inputs)
-                        self.metric(preds.cpu(), labels.cpu())
-
-                    valid_acc = self.metric.compute().item()
-                    self.metric.reset()
-                    self.results['valid_loss'].append(total_loss)
-                    self.results['valid_accuracy'].append(train_acc)
-                    self.writer.add_scalar('ValidLoss', total_loss, epoch)
-                    self.writer.add_scalar('ValidAccuracy', valid_acc, epoch)
+                    self.score_epoch(total_loss, epoch, 'valid')
 
             if self.checkpoint_file is not None:
                 torch.save(
