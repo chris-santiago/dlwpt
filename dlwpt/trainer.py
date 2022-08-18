@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 import torch
 import tqdm
 from torch.nn import functional as F
@@ -8,16 +10,19 @@ from dlwpt.utils import set_device
 
 
 class Trainer:
-    def __init__(self, model, epochs=20, device=None, log_dir=None):
+    def __init__(self, model, epochs=20, device=None, log_dir=None, checkpoint_file=None):
         self.model = model
         self.epochs = epochs
         self.device = device if device else set_device()
         self.model.to(self.device)
         self.metric = Accuracy()
         self.writer = SummaryWriter(log_dir=log_dir)
+        self.checkpoint_file = checkpoint_file
+        self.results = defaultdict(list)
 
     def fit(self, train_dl, test_dl=None):
         for epoch in tqdm.tqdm(range(self.epochs), desc='Epoch', leave=True):
+            self.results['epoch'].append(epoch)
             self.model.train()
             total_loss = 0
 
@@ -35,8 +40,10 @@ class Trainer:
                 preds = self.model.predict(inputs)
                 self.metric(preds.cpu(), labels.cpu())
 
-            train_acc = self.metric.compute()
+            train_acc = self.metric.compute().item()
             self.metric.reset()
+            self.results['train_loss'].append(total_loss)
+            self.results['train_accuracy'].append(train_acc)
             self.writer.add_scalar('TrainLoss', total_loss, epoch)
             self.writer.add_scalar('TrainAccuracy', train_acc, epoch)
 
@@ -55,10 +62,24 @@ class Trainer:
                         preds = self.model.predict(inputs)
                         self.metric(preds.cpu(), labels.cpu())
 
-                    valid_acc = self.metric.compute()
+                    valid_acc = self.metric.compute().item()
                     self.metric.reset()
+                    self.results['valid_loss'].append(total_loss)
+                    self.results['valid_accuracy'].append(train_acc)
                     self.writer.add_scalar('ValidLoss', total_loss, epoch)
                     self.writer.add_scalar('ValidAccuracy', valid_acc, epoch)
 
+            if self.checkpoint_file is not None:
+                torch.save(
+                    {
+                        'epoch': epoch,
+                        'model_state_dict': self.model.state_dict(),
+                        'optimizer_state_dict': self.model.optim.state_dict(),
+                        'results': self.results
+                    },
+                    self.checkpoint_file
+                )
+
         self.writer.flush()
         self.writer.close()
+        return self

@@ -57,14 +57,16 @@ if __name__ == "__main__":
     NOW = datetime.now().strftime('%Y%m%d-%H%M')
     LOG_DIR = ROOT.joinpath('runs', NOW)
     BATCH = 128
-    train, test = get_mnist_datasets()
+    train, test = get_mnist_datasets(do_augment=True)
 
     train_loader = DataLoader(train, batch_size=BATCH, shuffle=True)
     test_loader = DataLoader(test, batch_size=BATCH)
     device = set_device()
 
     mod = CNN()
-    trainer = Trainer(mod, epochs=10, device=device, log_dir=LOG_DIR)
+    trainer = Trainer(
+        mod, epochs=5, device=device, log_dir=LOG_DIR, checkpoint_file=LOG_DIR.joinpath('model.pt')
+    )
     trainer.fit(train_loader, test_loader)
 
 

@@ -7,7 +7,7 @@ import re
 import requests
 import torch
 from torchvision.datasets import MNIST
-from torchvision.transforms import transforms
+from torchvision.transforms import transforms, Compose
 
 from dlwpt import ROOT
 
@@ -19,8 +19,15 @@ def set_device():
     return device[torch.backends.mps.is_available()]
 
 
-def get_mnist_datasets():
-    train = MNIST(DATA_DIR, train=True, download=True, transform=transforms.ToTensor())
+def get_mnist_datasets(do_augment=False):
+    transform = {
+        True: Compose([
+            transforms.RandomAffine(degrees=5, translate=(.05, .05), scale=(.98, 1.02)),
+            transforms.ToTensor()
+        ]),
+        False: transforms.ToTensor()
+    }
+    train = MNIST(DATA_DIR, train=True, download=True, transform=transform[do_augment])
     test = MNIST(DATA_DIR, train=False, download=True, transform=transforms.ToTensor())
     return train, test
 
