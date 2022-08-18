@@ -6,6 +6,7 @@ import re
 
 import requests
 import torch
+from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence
 from torchvision.datasets import MNIST
 from torchvision.transforms import transforms, Compose
 
@@ -69,3 +70,16 @@ def get_language_data(verbose=False):
 
     return data
 
+
+def pad_and_pack(batch):
+    inputs = []
+    labels = []
+    lengths = []
+    for x, y in batch:
+        inputs.append(x)
+        labels.append(y)
+        lengths.append(x.shape[0])
+    x_padded = pad_sequence(inputs, batch_first=False)
+    x_packed = pack_padded_sequence(x_padded, lengths, batch_first=False, enforce_sorted=False)
+    y_batched = torch.as_tensor(labels, dtype=torch.long)
+    return x_packed, y_batched

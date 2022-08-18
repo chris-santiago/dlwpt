@@ -1,10 +1,13 @@
+import os
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
+from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 
 from dlwpt.trainer import Trainer
-from dlwpt.utils import get_language_data, get_alphabet, set_device
+from dlwpt.utils import get_language_data, get_alphabet, set_device, pad_and_pack
 
 
 class LanguageNameDataset(Dataset):
@@ -40,8 +43,8 @@ class LastTimeStep(nn.Module):
         self.layers = layers
         self.num_directions = 2 if bidirectional else 1
 
-    def forward(self, input):
-        output, last_step = input[0], input[1]
+    def forward(self, inputs):
+        output, last_step = inputs[0], inputs[1]
         if isinstance(last_step, tuple):
             last_step = last_step[0]
         batch_size = last_step.shape[1]
@@ -49,6 +52,20 @@ class LastTimeStep(nn.Module):
         last_step = last_step[self.layers-1]
         last_step = last_step.permute(1, 0, 2)  # batch in first dim
         return last_step.reshape(batch_size, -1)
+
+
+class EmbeddingPackable(nn.Module):
+    def __init__(self, embed_layer):
+        super().__init__()
+        self.embed_layer = embed_layer
+
+    def forward(self, inputs):
+        if type(inputs) == torch.nn.utils.rnn.PackedSequence:
+            sequences, lengths = pad_packed_sequence(inputs, batch_first=True)
+            sequences = self.embed_layer(sequences)
+            return pack_padded_sequence(sequences, lengths, batch_first=True, enforce_sorted=False)
+        else:
+            return self.embed_layer(inputs)
 
 
 class RnnModel(nn.Module):
@@ -62,10 +79,10 @@ class RnnModel(nn.Module):
         self.loss_func = nn.CrossEntropyLoss()
 
         self.model = nn.Sequential(
-            nn.Embedding(self.vocab_size, self.embed_dims),
-            nn.RNN(self.embed_dims, self.hidden_size, batch_first=True),
+            EmbeddingPackable(nn.Embedding(self.vocab_size, self.embed_dims)),
+            nn.GRU(self.embed_dims, self.hidden_size, batch_first=True, bidirectional=True),
             LastTimeStep(),
-            nn.Linear(self.hidden_size, self.n_classes)
+            nn.Linear(self.hidden_size*2, self.n_classes)
         )
 
         self.optim = optim if optim else torch.optim.Adam(self.model.parameters(), lr=self.lr)
@@ -90,9 +107,10 @@ if __name__ == '__main__':
     dataset = LanguageNameDataset(data, alphabet)
 
     test_size = 300
+    bs = 32
     train, test = torch.utils.data.random_split(dataset, (len(dataset)-test_size, test_size))
-    train_ldr = DataLoader(train, batch_size=1, shuffle=True)
-    test_ldr = DataLoader(test, batch_size=1, shuffle=False)
+    train_ldr = DataLoader(train, batch_size=bs, shuffle=True, collate_fn=pad_and_pack)
+    test_ldr = DataLoader(test, batch_size=bs, shuffle=False, collate_fn=pad_and_pack)
 
     device = set_device()
     mod = RnnModel(vocab_size=len(letters), n_classes=len(dataset.label_names))
