@@ -22,12 +22,17 @@ class Trainer:
         self.writer = SummaryWriter(log_dir=log_dir)
         self.checkpoint_file = checkpoint_file
         self.results = defaultdict(list)
+
         if optimizer:  # optionally override model's optimizer; # todo consider refactoring
             self.model.optim = optimizer(self.model.parameters(), self.model.lr)
-        if lr_schedule_kwargs:
-            self.lr_schedule = lr_schedule(self.model.optim, **lr_schedule_kwargs)
+
+        if lr_schedule:
+            if lr_schedule_kwargs:
+                self.lr_schedule = lr_schedule(self.model.optim, **lr_schedule_kwargs)
+            else:
+                self.lr_schedule = lr_schedule(self.model.optim)
         else:
-            self.lr_schedule = lr_schedule(self.model.optim)
+            self.lr_schedule = None  # todo this is convoluted
 
     def score_batch(self, inputs, labels):
         preds = self.model.predict(inputs)
