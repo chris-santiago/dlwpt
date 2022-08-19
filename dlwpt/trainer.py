@@ -12,7 +12,7 @@ from dlwpt.utils import set_device
 class Trainer:
     def __init__(
             self, model, epochs=20, score_funcs=None, device=None, log_dir=None,
-            checkpoint_file=None, optimizer=None, lr_schedule=None
+            checkpoint_file=None, optimizer=None, lr_schedule=None, lr_schedule_kwargs=None
     ):
         self.model = model
         self.epochs = epochs
@@ -24,7 +24,10 @@ class Trainer:
         self.results = defaultdict(list)
         if optimizer:  # optionally override model's optimizer; # todo consider refactoring
             self.model.optim = optimizer(self.model.parameters(), self.model.lr)
-        self.lr_schedule = lr_schedule
+        if lr_schedule_kwargs:
+            self.lr_schedule = lr_schedule(self.model.optim, **lr_schedule_kwargs)
+        else:
+            self.lr_schedule = lr_schedule(self.model.optim)
 
     def score_batch(self, inputs, labels):
         preds = self.model.predict(inputs)
