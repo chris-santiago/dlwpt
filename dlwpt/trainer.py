@@ -12,7 +12,7 @@ from dlwpt.utils import set_device
 class Trainer:
     def __init__(
             self, model, epochs=20, score_funcs=None, device=None, log_dir=None,
-            checkpoint_file=None
+            checkpoint_file=None, optimizer=None, lr_schedule=None
     ):
         self.model = model
         self.epochs = epochs
@@ -22,6 +22,9 @@ class Trainer:
         self.writer = SummaryWriter(log_dir=log_dir)
         self.checkpoint_file = checkpoint_file
         self.results = defaultdict(list)
+        if optimizer:  # optionally override model's optimizer; # todo consider refactoring
+            self.model.optim = optimizer(self.model.parameters(), self.model.lr)
+        self.lr_schedule = lr_schedule
 
     def score_batch(self, inputs, labels):
         preds = self.model.predict(inputs)
@@ -37,7 +40,7 @@ class Trainer:
             self.writer.add_scalar(f'{mode}_{metric}', score, epoch)
             self.score_funcs[metric].reset()
 
-    def fit(self, train_dl, test_dl=None):
+    def fit(self, train_dl, valid_dl=None):
         for epoch in tqdm.tqdm(range(self.epochs), desc='Epoch', leave=True):
             self.results['epoch'].append(epoch)
             self.model.train()
@@ -55,13 +58,14 @@ class Trainer:
                 self.model.optim.step()
                 self.score_batch(inputs, labels)
 
+            total_loss /= len(train_dl)
             self.score_epoch(total_loss, epoch, 'train')
 
-            if test_dl:
+            if valid_dl:
                 self.model.eval()
                 with torch.no_grad():
                     total_loss = 0
-                    for inputs, labels in tqdm.tqdm(test_dl, desc='Batch', leave=False):
+                    for inputs, labels in tqdm.tqdm(valid_dl, desc='Batch', leave=False):
                         inputs = inputs.to(self.device)
                         labels = labels.to(self.device)
                         logits = self.model(inputs)
@@ -69,7 +73,14 @@ class Trainer:
                         total_loss += loss.item()
                         self.score_batch(inputs, labels)
 
+                    total_loss /= len(valid_dl)
                     self.score_epoch(total_loss, epoch, 'valid')
+
+                if self.lr_schedule:
+                    if isinstance(self.lr_schedule, torch.optim.lr_scheduler.ReduceLROnPlateau):
+                        self.lr_schedule.step(total_loss)
+                    else:
+                        self.lr_schedule.step()
 
             if self.checkpoint_file is not None:
                 torch.save(

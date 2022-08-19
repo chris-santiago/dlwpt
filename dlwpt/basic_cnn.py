@@ -40,7 +40,7 @@ class CNN(nn.Module):
             nn.Linear((self.n_filters * self.h * self.w) // ((self.pool_size*self.pool_size)*2), self.n_classes)
         )
 
-        self.optim = optim if optim else torch.optim.Adam(self.layers.parameters(), lr=self.lr)
+        self.optim = optim if optim else torch.optim.AdamW(self.layers.parameters(), lr=self.lr)
 
     def forward(self, x):
         return self.layers(x)
