@@ -8,9 +8,8 @@ from dlwpt.utils import set_device, get_mnist_datasets
 
 
 class CNN(nn.Module):
-    def __init__(self, lr=0.001, n_classes=10, n_filters=16, kernel_size=3, pool_size=2, optim=None):
+    def __init__(self, n_classes=10, n_filters=16, kernel_size=3, pool_size=2, optim=None):
         super().__init__()
-        self.lr = lr
         self.n_classes = n_classes
         self.n_filters = n_filters
         self.kernel_size = kernel_size
@@ -21,7 +20,7 @@ class CNN(nn.Module):
         self.h = 28
         self.w = 28
 
-        self.layers = nn.Sequential(
+        self.model = nn.Sequential(
             nn.Conv2d(self.c, self.n_filters, self.kernel_size, padding=self.kernel_size // 2),
             nn.ReLU(),
             nn.Conv2d(self.n_filters, self.n_filters, self.kernel_size, padding=self.kernel_size // 2),
@@ -40,10 +39,8 @@ class CNN(nn.Module):
             nn.Linear((self.n_filters * self.h * self.w) // ((self.pool_size*self.pool_size)*2), self.n_classes)
         )
 
-        self.optim = optim if optim else torch.optim.AdamW(self.layers.parameters(), lr=self.lr)
-
     def forward(self, x):
-        return self.layers(x)
+        return self.model(x)
 
     def predict(self, x):
         logits = self(x)
@@ -64,9 +61,9 @@ if __name__ == "__main__":
     device = set_device()
 
     mod = CNN()
+    opt = torch.optim.AdamW(mod.parameters(), lr=0.001)
     trainer = Trainer(
-        mod, epochs=5, device=device, log_dir=LOG_DIR, checkpoint_file=LOG_DIR.joinpath('model.pt')
+        mod, epochs=5, device=device, log_dir=LOG_DIR, checkpoint_file=LOG_DIR.joinpath('model.pt'),
+        optimizer=opt
     )
     trainer.fit(train_loader, test_loader)
-
-

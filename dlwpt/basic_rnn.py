@@ -1,5 +1,3 @@
-import os
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -69,11 +67,10 @@ class EmbeddingPackable(nn.Module):
 
 
 class RnnModel(nn.Module):
-    def __init__(self, vocab_size, n_classes, lr=0.001, embed_dims=64, hidden_size=256, optim=None):
+    def __init__(self, vocab_size, n_classes, embed_dims=64, hidden_size=256, optim=None):
         super().__init__()
         self.vocab_size = vocab_size
         self.n_classes = n_classes
-        self.lr = lr
         self.embed_dims = embed_dims
         self.hidden_size = hidden_size
         self.loss_func = nn.CrossEntropyLoss()
@@ -84,8 +81,6 @@ class RnnModel(nn.Module):
             LastTimeStep(),
             nn.Linear(self.hidden_size*2, self.n_classes)
         )
-
-        self.optim = optim if optim else torch.optim.Adam(self.model.parameters(), lr=self.lr)
 
     def forward(self, x):
         return self.model(x)
@@ -114,5 +109,5 @@ if __name__ == '__main__':
 
     device = set_device()
     mod = RnnModel(vocab_size=len(letters), n_classes=len(dataset.label_names))
-    trainer = Trainer(mod, epochs=5, device=device, log_dir=LOG_DIR)
+    trainer = Trainer(mod, epochs=20, device=device, log_dir=LOG_DIR)
     trainer.fit(train_ldr, test_ldr)

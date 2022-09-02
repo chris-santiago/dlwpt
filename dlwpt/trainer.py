@@ -12,7 +12,7 @@ from dlwpt.utils import set_device
 class Trainer:
     def __init__(
             self, model, epochs=20, score_funcs=None, device=None, log_dir=None,
-            checkpoint_file=None, optimizer=None, lr_schedule=None, lr_schedule_kwargs=None
+            checkpoint_file=None, optimizer=None, lr_schedule=None
     ):
         self.model = model
         self.epochs = epochs
@@ -21,18 +21,9 @@ class Trainer:
         self.model.to(self.device)
         self.writer = SummaryWriter(log_dir=log_dir)
         self.checkpoint_file = checkpoint_file
+        self.optimizer = optimizer if optimizer else torch.optim.AdamW(self.model.parameters())
+        self.lr_schedule = lr_schedule
         self.results = defaultdict(list)
-
-        if optimizer:  # optionally override model's optimizer; # todo consider refactoring
-            self.model.optim = optimizer(self.model.parameters(), self.model.lr)
-
-        if lr_schedule:
-            if lr_schedule_kwargs:
-                self.lr_schedule = lr_schedule(self.model.optim, **lr_schedule_kwargs)
-            else:
-                self.lr_schedule = lr_schedule(self.model.optim)
-        else:
-            self.lr_schedule = None  # todo this is convoluted
 
     def score_batch(self, inputs, labels):
         preds = self.model.predict(inputs)
@@ -57,13 +48,13 @@ class Trainer:
             for inputs, labels in tqdm.tqdm(train_dl, desc='Batch', leave=False):
                 inputs = inputs.to(self.device)
                 labels = labels.to(self.device)
-                self.model.optim.zero_grad()
+                self.optimizer.zero_grad()
 
                 logits = self.model(inputs)
                 loss = self.model.loss_func(logits, labels)
                 loss.backward()
                 total_loss += loss.item()
-                self.model.optim.step()
+                self.optimizer.step()
                 self.score_batch(inputs, labels)
 
             total_loss /= len(train_dl)
@@ -95,7 +86,7 @@ class Trainer:
                     {
                         'epoch': epoch,
                         'model_state_dict': self.model.state_dict(),
-                        'optimizer_state_dict': self.model.optim.state_dict(),
+                        'optimizer_state_dict': self.optimizer.state_dict(),
                         'results': self.results
                     },
                     self.checkpoint_file
