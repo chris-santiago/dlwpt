@@ -6,6 +6,7 @@ import re
 
 import requests
 import torch
+import torch.nn as nn
 from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence
 from torchvision.datasets import MNIST
 from torchvision.transforms import transforms, Compose
@@ -83,3 +84,18 @@ def pad_and_pack(batch):
     x_packed = pack_padded_sequence(x_padded, lengths, batch_first=False, enforce_sorted=False)
     y_batched = torch.as_tensor(labels, dtype=torch.long)
     return x_packed, y_batched
+
+
+def add_noise(x, loc=0, scale=1):
+    noise = torch.distributions.Normal(loc, scale)
+    return x + noise.sample(sample_shape=x.shape)
+
+
+class WhiteNoise(nn.Module):
+    def __init__(self, loc=0, scale=1):
+        super().__init__()
+        self.loc = loc
+        self.scale = scale
+
+    def forward(self, x):
+        return add_noise(x, self.loc, self.scale)

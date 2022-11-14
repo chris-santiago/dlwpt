@@ -64,15 +64,19 @@ class AutoEncoder(nn.Module):
 
 
 class AutoEncoderDataset(Dataset):
-    def __init__(self, dataset):
+    def __init__(self, dataset, transform=None):
         self.dataset = dataset
+        self.transform = transform
 
     def __len__(self):
         return len(self.dataset)
 
     def __getitem__(self, idx):
         inputs, _ = self.dataset.__getitem__(idx)
+        if self.transform:
+            inputs = self.transform(inputs)
         return inputs, inputs
+
 
 
 if __name__ == "__main__":
