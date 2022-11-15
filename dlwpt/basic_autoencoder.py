@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader, Dataset
 from torchmetrics import MeanSquaredError
 
 from dlwpt.trainer import Trainer
-from dlwpt.utils import set_device, get_mnist_datasets
+from dlwpt.utils import set_device, get_mnist_datasets, WhiteNoise
 
 
 class EncoderLayer(nn.Module):
@@ -61,6 +61,19 @@ class AutoEncoder(nn.Module):
         self.eval()
         with torch.no_grad():
             return self(x)
+
+
+class NoisyAutoEncoder(AutoEncoder):
+    def __init__(self,  layers: Tuple[int, ...], input_shape: Tuple[int, int]):
+        super().__init__(layers, input_shape)
+        self.encoder = nn.Sequential(
+            nn.Flatten(),
+            WhiteNoise(),
+            nn.Linear(self.input_shape[0] * self.input_shape[1], self.encoder_shape[0]),
+            *self.encoder_layers,
+            nn.Linear(self.encoder_shape[-2], self.encoder_shape[-1])
+
+        )
 
 
 class AutoEncoderDataset(Dataset):
