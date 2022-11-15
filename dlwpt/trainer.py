@@ -40,12 +40,14 @@ class Trainer:
             self.score_funcs[metric].reset()
 
     def fit(self, train_dl, valid_dl=None):
-        for epoch in tqdm.tqdm(range(self.epochs), desc='Epoch', leave=True):
+        for epoch in range(self.epochs):
             self.results['epoch'].append(epoch)
             self.model.train()
             total_loss = 0
 
-            for inputs, labels in tqdm.tqdm(train_dl, desc='Batch', leave=False):
+            train_pbar = tqdm.tqdm(train_dl, position=0, leave=False)
+            for inputs, labels in train_pbar:
+                train_pbar.set_description(f"Epoch {epoch} training")
                 inputs = inputs.to(self.device)
                 labels = labels.to(self.device)
                 self.optimizer.zero_grad()
@@ -64,7 +66,9 @@ class Trainer:
                 self.model.eval()
                 with torch.no_grad():
                     total_loss = 0
-                    for inputs, labels in tqdm.tqdm(valid_dl, desc='Batch', leave=False):
+                    valid_pbar = tqdm.tqdm(valid_dl, desc='Batch', position=0, leave=False)
+                    valid_pbar.set_description(f"Epoch {epoch} validation")
+                    for inputs, labels in valid_pbar:
                         inputs = inputs.to(self.device)
                         labels = labels.to(self.device)
                         logits = self.model(inputs)
