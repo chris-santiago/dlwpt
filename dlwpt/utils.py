@@ -88,7 +88,7 @@ def pad_and_pack(batch):
 
 def add_noise(x, loc=0, scale=1):
     noise = torch.distributions.Normal(loc, scale)
-    return x + noise.sample(sample_shape=x.shape)
+    return x + noise.sample(sample_shape=x.shape).to(x.device)
 
 
 class WhiteNoise(nn.Module):
