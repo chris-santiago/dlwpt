@@ -45,7 +45,7 @@ class Trainer:
             self.model.train()
             total_loss = 0
 
-            train_pbar = tqdm.tqdm(train_dl, position=0, leave=False)
+            train_pbar = tqdm.tqdm(train_dl, position=0, leave=False, bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}')
             for inputs, labels in train_pbar:
                 train_pbar.set_description(f"Epoch {epoch} training")
                 inputs = inputs.to(self.device)
@@ -56,6 +56,7 @@ class Trainer:
                 loss = self.model.loss_func(logits, labels)
                 loss.backward()
                 total_loss += loss.item()
+                train_pbar.set_postfix_str(f"loss={round(loss.item(), 4)}")
                 self.optimizer.step()
                 self.score_batch(inputs, labels)
 
@@ -66,7 +67,7 @@ class Trainer:
                 self.model.eval()
                 with torch.no_grad():
                     total_loss = 0
-                    valid_pbar = tqdm.tqdm(valid_dl, desc='Batch', position=0, leave=False)
+                    valid_pbar = tqdm.tqdm(valid_dl, desc='Batch', position=0, leave=False, bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}')
                     valid_pbar.set_description(f"Epoch {epoch} validation")
                     for inputs, labels in valid_pbar:
                         inputs = inputs.to(self.device)
@@ -74,6 +75,7 @@ class Trainer:
                         logits = self.model(inputs)
                         loss = self.model.loss_func(logits, labels)
                         total_loss += loss.item()
+                        valid_pbar.set_postfix_str(f"loss={round(loss.item(), 4)}")
                         self.score_batch(inputs, labels)
 
                     total_loss /= len(valid_dl)
