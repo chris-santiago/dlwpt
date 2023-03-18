@@ -16,7 +16,7 @@ class Trainer:
     ):
         self.model = model
         self.epochs = epochs
-        self.score_funcs = score_funcs if score_funcs else {'accuracy': Accuracy()}
+        self.score_funcs = score_funcs if score_funcs else {'accuracy': Accuracy('binary')}
         self.device = device if device else set_device()
         self.model.to(self.device)
         self.writer = SummaryWriter(log_dir=log_dir)

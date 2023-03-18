@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torchmetrics
 from torch.utils.data import DataLoader
 
 from dlwpt.trainer import Trainer
@@ -60,10 +61,10 @@ if __name__ == "__main__":
     test_loader = DataLoader(test, batch_size=BATCH)
     device = set_device()
 
-    mod = CNN()
+    mod = torch.compile(CNN())
     opt = torch.optim.AdamW(mod.parameters(), lr=0.001)
     trainer = Trainer(
         mod, epochs=5, device=device, log_dir=LOG_DIR, checkpoint_file=LOG_DIR.joinpath('model.pt'),
-        optimizer=opt
+        optimizer=opt, score_funcs={'accuracy': torchmetrics.Accuracy(task='multiclass', num_classes=10)}
     )
     trainer.fit(train_loader, test_loader)
