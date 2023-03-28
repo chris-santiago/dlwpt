@@ -1,0 +1,33 @@
+hparams:
+  batch: 128
+  shuffle: true
+  epochs: 5
+  lr: 0.001
+  n_classes: 10
+  n_filters: 8
+  kernel_size: 3
+  pool_size: 2
+  num_workers: 10
+experiment:
+  name: cnn-hydra-trial
+  model:
+    _target_: dlwpt.basic_cnn_lightning.LitCNN
+    n_classes: ${hparams.n_classes}
+    n_filters: ${hparams.n_filters}
+    kernel_size: ${hparams.kernel_size}
+    pool_size: ${hparams.pool_size}
+    loss_func:
+      _target_: torch.nn.CrossEntropyLoss
+    score_func:
+      _target_: torchmetrics.Accuracy
+      task: multiclass
+      num_classes: ${hparams.n_classes}
+    optim:
+      _partial_: true
+      _target_: torch.optim.Adam
+      lr: ${hparams.lr}
+logger:
+  _target_: aim.pytorch_lightning.AimLogger
+  experiment: ${experiment.name}
+  train_metric_prefix: train_
+  val_metric_prefix: valid_
