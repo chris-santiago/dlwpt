@@ -146,3 +146,7 @@ cython_debug/
 # User
 /data/MNIST/
 /runs/
+/dlwpt/lightning_logs/
+/dlwpt/data/
+/dlwpt/.aim/
+/.aim/

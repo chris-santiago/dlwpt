@@ -2,7 +2,6 @@ from typing import Tuple
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch.utils.data import DataLoader, Dataset
 from torchmetrics import MeanSquaredError
 
@@ -16,9 +15,7 @@ class EncoderLayer(nn.Module):
         self.size_in = input_size
         self.size_out = output_size
         self.model = nn.Sequential(
-            nn.Linear(input_size, output_size),
-            nn.BatchNorm1d(output_size),
-            nn.ReLU()
+            nn.Linear(input_size, output_size), nn.BatchNorm1d(output_size), nn.ReLU()
         )
 
     def forward(self, x):
@@ -32,23 +29,27 @@ class AutoEncoder(nn.Module):
         self.encoder_shape = layers
         self.decoder_shape = tuple(reversed(layers))
         self.encoder_layers = nn.ModuleList(
-            [EncoderLayer(self.encoder_shape[i], self.encoder_shape[i + 1]) for i in range(len(self.encoder_shape) - 2)]
+            [
+                EncoderLayer(self.encoder_shape[i], self.encoder_shape[i + 1])
+                for i in range(len(self.encoder_shape) - 2)
+            ]
         )
         self.decoder_layers = nn.ModuleList(
-            [EncoderLayer(self.decoder_shape[i], self.decoder_shape[i + 1]) for i in range(len(self.decoder_shape) - 2)]
+            [
+                EncoderLayer(self.decoder_shape[i], self.decoder_shape[i + 1])
+                for i in range(len(self.decoder_shape) - 2)
+            ]
         )
         self.encoder = nn.Sequential(
             nn.Flatten(),
             nn.Linear(self.input_shape[0] * self.input_shape[1], self.encoder_shape[0]),
             *self.encoder_layers,
             nn.Linear(self.encoder_shape[-2], self.encoder_shape[-1])
-
         )
         self.decoder = nn.Sequential(
             *self.decoder_layers,
             nn.Linear(self.decoder_shape[-2], self.decoder_shape[-1]),
             nn.Linear(self.decoder_shape[-1], self.input_shape[0] * self.input_shape[1])
-
         )
         self.loss_func = nn.MSELoss()
 
@@ -64,7 +65,7 @@ class AutoEncoder(nn.Module):
 
 
 class NoisyAutoEncoder(AutoEncoder):
-    def __init__(self,  layers: Tuple[int, ...], input_shape: Tuple[int, int]):
+    def __init__(self, layers: Tuple[int, ...], input_shape: Tuple[int, int]):
         super().__init__(layers, input_shape)
         self.encoder = nn.Sequential(
             nn.Flatten(),
@@ -72,7 +73,6 @@ class NoisyAutoEncoder(AutoEncoder):
             nn.Linear(self.input_shape[0] * self.input_shape[1], self.encoder_shape[0]),
             *self.encoder_layers,
             nn.Linear(self.encoder_shape[-2], self.encoder_shape[-1])
-
         )
 
 
@@ -91,13 +91,12 @@ class AutoEncoderDataset(Dataset):
         return inputs, inputs
 
 
-
 if __name__ == "__main__":
     from dlwpt import ROOT
     from datetime import datetime
 
-    NOW = datetime.now().strftime('%Y%m%d-%H%M')
-    LOG_DIR = ROOT.joinpath('runs', NOW)
+    NOW = datetime.now().strftime("%Y%m%d-%H%M")
+    LOG_DIR = ROOT.joinpath("runs", NOW)
     BATCH = 128
     train, test = get_mnist_datasets(do_augment=False)
     train, test = AutoEncoderDataset(train), AutoEncoderDataset(test)
@@ -109,7 +108,12 @@ if __name__ == "__main__":
     mod = AutoEncoder(layers=(128, 64, 16), input_shape=(28, 28))
     opt = torch.optim.AdamW(mod.parameters(), lr=0.001)
     trainer = Trainer(
-        mod, epochs=10, device=device, log_dir=LOG_DIR, checkpoint_file=LOG_DIR.joinpath('model.pt'),
-        optimizer=opt, score_funcs={'mse': MeanSquaredError()}
+        mod,
+        epochs=10,
+        device=device,
+        log_dir=LOG_DIR,
+        checkpoint_file=LOG_DIR.joinpath("model.pt"),
+        optimizer=opt,
+        score_funcs={"mse": MeanSquaredError()},
     )
     trainer.fit(train_loader, test_loader)

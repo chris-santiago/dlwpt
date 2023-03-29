@@ -23,11 +23,15 @@ def set_device():
 
 def get_mnist_datasets(do_augment=False):
     transform = {
-        True: Compose([
-            transforms.RandomAffine(degrees=5, translate=(.05, .05), scale=(.98, 1.02)),
-            transforms.ToTensor()
-        ]),
-        False: transforms.ToTensor()
+        True: Compose(
+            [
+                transforms.RandomAffine(
+                    degrees=5, translate=(0.05, 0.05), scale=(0.98, 1.02)
+                ),
+                transforms.ToTensor(),
+            ]
+        ),
+        False: transforms.ToTensor(),
     }
     train = MNIST(DATA_DIR, train=True, download=True, transform=transform[do_augment])
     test = MNIST(DATA_DIR, train=False, download=True, transform=transforms.ToTensor())
@@ -42,15 +46,15 @@ def get_alphabet():
 
 def to_ascii(s):
     letters, _ = get_alphabet()
-    return ''.join(
-        c for c in unicodedata.normalize('NFD', s)
-        if unicodedata.category(c) != 'Mn'
-        and c in letters
+    return "".join(
+        c
+        for c in unicodedata.normalize("NFD", s)
+        if unicodedata.category(c) != "Mn" and c in letters
     )
 
 
 def get_language_data(verbose=False):
-    url = 'https://download.pytorch.org/tutorial/data.zip'
+    url = "https://download.pytorch.org/tutorial/data.zip"
     resp = requests.get(url)
     contents = zipfile.ZipFile(io.BytesIO(resp.content))
     contents.extractall()
@@ -58,16 +62,16 @@ def get_language_data(verbose=False):
     data = {}
 
     for fp in contents.namelist():
-        if 'data/names/' in fp and fp.endswith('.txt'):
-            lang = re.search(r'([A-Z]+)\w+', fp)[0]
+        if "data/names/" in fp and fp.endswith(".txt"):
+            lang = re.search(r"([A-Z]+)\w+", fp)[0]
             with contents.open(fp) as file:
                 lang_names = [
                     to_ascii(line).lower()
-                    for line in str(file.read(), encoding='utf-8').strip().split('\n')
+                    for line in str(file.read(), encoding="utf-8").strip().split("\n")
                 ]
                 data[lang] = lang_names
             if verbose:
-                print(f'{lang}: {len(lang_names)}')
+                print(f"{lang}: {len(lang_names)}")
 
     return data
 
@@ -81,7 +85,9 @@ def pad_and_pack(batch):
         labels.append(y)
         lengths.append(x.shape[0])
     x_padded = pad_sequence(inputs, batch_first=False)
-    x_packed = pack_padded_sequence(x_padded, lengths, batch_first=False, enforce_sorted=False)
+    x_packed = pack_padded_sequence(
+        x_padded, lengths, batch_first=False, enforce_sorted=False
+    )
     y_batched = torch.as_tensor(labels, dtype=torch.long)
     return x_packed, y_batched
 
@@ -99,3 +105,10 @@ class WhiteNoise(nn.Module):
 
     def forward(self, x):
         return add_noise(x, self.loc, self.scale)
+
+
+def get_shakespear_data():
+    url = "https://cs.stanford.edu/people/karpathy/char-rnn/shakespear.txt"
+    resp = requests.get(url)
+    contents = resp.content.decode("utf-8").lower()
+    return contents
