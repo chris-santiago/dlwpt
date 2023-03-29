@@ -105,3 +105,10 @@ class WhiteNoise(nn.Module):
 
     def forward(self, x):
         return add_noise(x, self.loc, self.scale)
+
+
+def get_shakespear_data():
+    url = "https://cs.stanford.edu/people/karpathy/char-rnn/shakespear.txt"
+    resp = requests.get(url)
+    contents = resp.content.decode("utf-8").lower()
+    return contents
