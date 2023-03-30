@@ -123,9 +123,6 @@ if __name__ == '__main__':
         max_chunk=250
     )
     dl = DataLoader(ds, batch_size=32, shuffle=True, num_workers=10)
-    batch = next(iter(dl))
-    print(batch[0].shape)
-    print(batch[1].shape)
 
     optim = partial(torch.optim.Adam, lr=0.001)
     loss_func = CrossEntropyTimeLoss()
