@@ -1,5 +1,6 @@
 from functools import partial
 
+import aim
 import numpy as np
 import torch
 import pytorch_lightning as L
@@ -77,6 +78,33 @@ class BasicAttnNet(BaselineNet):
             nn.BatchNorm1d(self.neurons),
             nn.Linear(self.neurons, self.n_classes),
         )
+
+    def validation_step(self, batch, idx):
+        x, y = batch
+        preds = self(x)
+        loss = self.loss_func(preds, y)
+        score = self.score_func(preds, y)
+        self.log(
+            "valid_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True
+        )
+        self.log(
+            "valid_accuracy",
+            score,
+            on_step=True,
+            on_epoch=True,
+            prog_bar=True,
+            logger=True,
+        )
+        log_img = torch.rand(1)
+        if log_img > .95:  # sample 5% of time  # todo make this a function of the score
+            label = str(y[0].item())
+            for i in range(3):
+                img = aim.Image(x[0, i, :, :, :], caption=label)
+                self.logger.experiment.track(
+                    img,
+                    name=f'Image Set, Sample {str(log_img.item())}',
+                    context={'dataset': 'train', 'max': label}
+                )
 
 
 if __name__ == '__main__':

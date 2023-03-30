@@ -4,6 +4,7 @@ import numpy as np
 import torch
 import pytorch_lightning as L
 import torchmetrics
+import aim
 import torch.nn as nn
 
 from dlwpt.utils import get_mnist_datasets
@@ -93,6 +94,16 @@ class BaselineNet(L.LightningModule):
             prog_bar=True,
             logger=True,
         )
+        log_img = torch.rand(1)
+        if log_img > .95:  # sample 5% of time
+            label = str(y[0].item())
+            for i in range(3):
+                img = aim.Image(x[0, i, :, :, :], caption=label)
+                self.logger.experiment.track(
+                    img,
+                    name=f'Image Set, Sample {str(log_img.item())}',
+                    context={'dataset': 'train', 'max': label}
+                )
         # return loss
 
     def configure_optimizers(self):
