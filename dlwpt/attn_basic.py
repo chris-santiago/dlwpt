@@ -128,7 +128,7 @@ if __name__ == '__main__':
 
     from torchview import draw_graph
     graph = draw_graph(
-        mod, input_size=(BATCH, 3, 1, 28, 28), device='mps', expand_nested=True,
+        mod, input_size=(BATCH, 3, 1, 28, 28), device='mps', expand_nested=False,
         save_graph=True, depth=5, directory='../images/'
     )
     graph.visual_graph.render(format='svg')
