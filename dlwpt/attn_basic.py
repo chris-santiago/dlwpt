@@ -122,6 +122,17 @@ if __name__ == '__main__':
     optim = partial(torch.optim.Adam, lr=0.001)
     mod = BasicAttnNet(optim=optim)
 
+    # from torchviz import make_dot
+    # batch = next(iter(train_dl))
+    # make_dot(mod(batch[0][0])).render('model', format='png')
+
+    from torchview import draw_graph
+    graph = draw_graph(
+        mod, input_size=(BATCH, 3, 1, 28, 28), device='mps', expand_nested=True,
+        save_graph=True, depth=5, directory='../images/'
+    )
+    graph.visual_graph.render(format='svg')
+
     # track experimental data by using Aim
     aim_logger = AimLogger(
         experiment="basic-attn-largest-digit",

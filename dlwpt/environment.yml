@@ -204,6 +204,7 @@ dependencies:
       - sqlalchemy==1.4.47
       - starlette==0.26.1
       - tomli==2.0.1
+      - torchview==0.2.6
       - torchviz==0.0.2
       - uvicorn==0.21.1
       - xmltodict==0.13.0
